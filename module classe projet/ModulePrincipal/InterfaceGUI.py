@@ -526,6 +526,7 @@ class Ui_Form_3(object):
         self.buttonNext.setGeometry(QtCore.QRect(850, 680, 121, 41))
         self.buttonNext.setText("Suivant")
         self.buttonNext.clicked.connect(go_to_page4)
+        self.checkStates = {}
         self.initUI()
         
     def retranslateUi(self, Form):
@@ -540,11 +541,13 @@ class Ui_Form_3(object):
     def initUI(self):
         self.buttonDetails.clicked.connect(self.details_clicked)
         self.buttonDetails_2.clicked.connect(self.details_clicked_2)
+        
     def load_combo_pc(self):
         ListeProduits = []
         ListeCharges = []
         revenu_widget = []
         for activite in ui.Projet.ListeActivites:
+            self.checkStates[activite.getNom()] = {}
             activite.IdentifierCouts()
             activite.IdentifierRevenus()
             WidgetActivity_C = QtWidgets.QTreeWidgetItem(self.listWidget_2)
@@ -552,18 +555,39 @@ class Ui_Form_3(object):
             WidgetActivity_C.setText(0,activite.getNom())
             WidgetActivity_R.setText(0,activite.getNom())
             for cout in activite.getlistCout():
+                self.checkStates[activite.getNom()][cout.getNom()] = 0
                 costWidget = QtWidgets.QTreeWidgetItem(WidgetActivity_C)
                 costWidget.setText(0,cout.getNom())
                 costWidget.setFlags(costWidget.flags() | Qt.ItemIsUserCheckable)
                 costWidget.setCheckState(0, Qt.Unchecked)
+            self.checkStates[activite.getNom()]["Autre Cout"] = 0
+            costWidget = QtWidgets.QTreeWidgetItem(WidgetActivity_C)
+            costWidget.setText(0,"Autre Cout")
+            costWidget.setFlags(costWidget.flags() | Qt.ItemIsUserCheckable | Qt.ItemIsEditable)
+            costWidget.setCheckState(0, Qt.Unchecked)
             for revenu in activite.getlistRev():
                 revenuWidget = QtWidgets.QTreeWidgetItem(WidgetActivity_R)
                 revenuWidget.setText(0,revenu.getNom())
                 revenuWidget.setFlags(revenuWidget.flags() | Qt.ItemIsUserCheckable)
                 revenuWidget.setCheckState(0, Qt.Unchecked)
-        
         for i in ListeCharges:
             self.comboBox_c.addItem(i)
+        self.listWidget_2.itemChanged.connect(self.handle)
+
+    def handle(self, item, column):
+        self.checkStates[item.parent().text(0)][item.text(0)] = item.checkState(0)
+        activite = getActivByName(ui.Projet.ListeActivites,item.parent().text(0))
+        if item.text(0) not in [i.getNom() for i in activite.getlistCout()]:
+            activite.listCout.append(Cout(Nom = item.text(0),Type = "Indirect"))
+            self.listWidget_2.itemChanged.disconnect(self.handle)
+            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+            costWidget = QtWidgets.QTreeWidgetItem(item.parent())
+            costWidget.setText(0,"Autre Cout")
+            costWidget.setFlags(costWidget.flags() | Qt.ItemIsUserCheckable | Qt.ItemIsEditable)
+            costWidget.setCheckState(0, Qt.Unchecked)
+            self.listWidget_2.itemChanged.connect(self.handle)
+            
+            
     
     def details_clicked(self):
         for i in reversed(range(self.layout_SArea.count())): 
@@ -584,14 +608,14 @@ class Ui_Form_3(object):
             self.layout_SArea.removeWidget(widgetToRemove)
             widgetToRemove.setParent(None)
         CostWidget = self.listWidget_2.selectedItems()[0] 
-        ##### Cout associé au widget Cout ####"
+        ##### Cout associé au widget Cout ####
         for activite in ui.Projet.ListeActivites:
             for cout in activite.getlistCout():
                 if cout.getNom() == CostWidget.text(0) and CostWidget.checkState(0) == 2:
                     if activite.getNom() == CostWidget.parent().text(0):
                         Cout = cout
                         self.detailed_cout(Cout)
-        
+                        
     def detailed_produit(self,Revenu):
         print("Working Button")
         ####### Partie 1 Facturation   ######
@@ -955,28 +979,72 @@ class Ui_Form_4(object):
             
             #Modif Unicité des couts
             for cout in activite.getlistCout():
-                labelCout = QtWidgets.QLabel()
-                IndexActivite = str(ui.Projet.ListeActivites.index(activite)+1)
-                IndexCout = str(activite.getlistCout().index(cout)+1)
-                labelCout.setText(IndexActivite+"."+IndexCout+"- "+cout.getNom())
-                labelCout.setFont(FontCout)
-                labelCout.setMargin(5)
-                self.verticalLayout_2.addWidget(labelCout)
-                self.verticalLayout_2.addStretch(1)
-                listeQuestions = cout.SaisieIntrinseque_1()+cout.SaisieMarche_1()
-                print(listeQuestions)
-                UniqueQuestions = unifyQuestions(listeQuestions)
-                for question in UniqueQuestions:
+                if cout.Type == "Direct":
+                    labelCout = QtWidgets.QLabel()
+                    IndexActivite = str(ui.Projet.ListeActivites.index(activite)+1)
+                    IndexCout = str(activite.getlistCout().index(cout)+1)
+                    labelCout.setText(IndexActivite+"."+IndexCout+"- "+cout.getNom())
+                    labelCout.setFont(FontCout)
+                    labelCout.setMargin(5)
+                    self.verticalLayout_2.addWidget(labelCout)
+                    self.verticalLayout_2.addStretch(1)
+                    listeQuestions = cout.SaisieIntrinseque_1()+cout.SaisieMarche_1()
+                    print(listeQuestions)
+                    UniqueQuestions = unifyQuestions(listeQuestions)
+                    for question in UniqueQuestions:
+                        HorizentalLayout = QHBoxLayout()
+                        label = QLabel()
+                        label.setText(question[1][1])
+                        label.setMargin(5)
+                        lineEdit = QLineEdit()
+                        lineEdit.textChanged.connect(lambda arg1 = lineEdit.text(),arg2=question[0],arg3=question[1][0],arg4="Int",arg5=cout: self.assign_field_to_value_1(arg1,arg2,arg3,arg4,arg5))
+                        HorizentalLayout.addWidget(label)
+                        HorizentalLayout.addWidget(lineEdit)
+                        self.verticalLayout_2.addLayout(HorizentalLayout)
+                        self.verticalLayout_2.addStretch(1)
+                else:
+                    labelCout = QtWidgets.QLabel()
+                    IndexActivite = str(ui.Projet.ListeActivites.index(activite)+1)
+                    IndexCout = str(activite.getlistCout().index(cout)+1)
+                    labelCout.setText(IndexActivite+"."+IndexCout+"- "+cout.getNom())
+                    labelCout.setFont(FontCout)
+                    labelCout.setMargin(5)
+                    self.verticalLayout_2.addWidget(labelCout)
+                    self.verticalLayout_2.addStretch(1)
                     HorizentalLayout = QHBoxLayout()
                     label = QLabel()
-                    label.setText(question[1][1])
-                    label.setMargin(5)
+                    label.setText("Quelle est la structure de ce cout ?")
+                    combo_fix_pr = QComboBox()
+                    liste_fix_pr = ['------','Fixe','Pourcentage']
+                    for i in liste_fix_pr:
+                        combo_fix_pr.addItem(i)
+                    
+                    combo_CA_Couts = QComboBox()
+                    liste_CA_Couts = []
+                    for c in activite.getlistCout():
+                        if c.Type == "Direct":
+                            liste_CA_Couts.append(c.getNom())
+                    liste_CA_Couts.insert(0,"CA")
+                    for i in liste_CA_Couts:
+                        combo_CA_Couts.addItem(i)
+                    combo_CA_Couts.hide()
                     lineEdit = QLineEdit()
-                    lineEdit.textChanged.connect(lambda arg1 = lineEdit.text(),arg2=question[0],arg3=question[1][0],arg4="Int",arg5=cout: self.assign_field_to_value_1(arg1,arg2,arg3,arg4,arg5))
+                    label2 = QLabel()
+                    label2.setText("% de ")
+                    lineEdit.hide()
+                    label2.hide()
+                    combo_fix_pr.currentTextChanged.connect(lambda arg1 = combo_fix_pr.currentText(),arg2 = cout,arg3=combo_CA_Couts,arg4 =lineEdit,arg5=label2:self.fixeVariable(arg1,arg2,arg3,arg4,arg5))
+                    combo_CA_Couts.currentTextChanged.connect(lambda arg1 = combo_CA_Couts.currentText(),arg2 = cout:self.sourceCout(arg1,arg2))
+                    lineEdit.textChanged.connect(lambda arg1=lineEdit.text(),arg2 = cout:self.assign_percentage(arg1,arg2))
                     HorizentalLayout.addWidget(label)
+                    HorizentalLayout.addWidget(combo_fix_pr)
                     HorizentalLayout.addWidget(lineEdit)
+                    HorizentalLayout.addWidget(label2)
+                    HorizentalLayout.addWidget(combo_CA_Couts)
                     self.verticalLayout_2.addLayout(HorizentalLayout)
                     self.verticalLayout_2.addStretch(1)
+                    
+                    
         self.button = QPushButton()
         self.button.setText("Valider")
         self.verticalLayout.addWidget(self.button)
@@ -990,6 +1058,23 @@ class Ui_Form_4(object):
         self.verticalLayout_2.addStretch(1)
             
             
+    def fixeVariable(self,choix,cout,combo,lineEdit,label2):
+        if choix == "Fixe":
+            cout.isFixed = True
+            combo.hide()
+            
+        else:
+            cout.isFixed = False
+            cout.BaseCalcul = combo.currentText()
+            lineEdit.show()
+            label2.show()
+            combo.show()
+    def sourceCout(self,choix,cout):
+        cout.BaseCalcul = choix
+    
+    def assign_percentage(self,percentage,cout):
+        cout.prcCalcul = float(percentage)/100
+        
  #######  
     def open_excel(self):
         ui.Projet.PrepareExcelInput()
@@ -1004,7 +1089,13 @@ class Ui_Form_4(object):
                 CalculerRevenu(revenu)
         for activite in ui.Projet.ListeActivites:
             for cout in activite.getlistCout():
-                CalculerCout(cout)
+                if cout.Type == "Direct" or (cout.Type == "Indirect" and cout.isFixed == True):
+                    CalculerCout(cout)
+                else:
+                    if cout.BaseCalcul == "CA":
+                        CalculerCoutLie(cout,activite.getlistRev()[0])
+                    else:
+                        CalculerCoutLie(cout,getActivByName(activite.getlistCout(),cout.BaseCalcul))
         ui.Projet.GenerateCPC()
         ui.Projet.GenerateTFT()
     def open_cpc(self):
@@ -1123,7 +1214,7 @@ def SendTables():
     font.setBold(True)
     font.setItalic(True)
     for j in range(0,int(ui.lineEdit.text())+1):
-    #Ligne emplois
+    #Ligne emplois 
         ui2.tableWidget.item(1,j).setBackground(QColor("grey"))
         ui2.tableWidget.item(1,j).setForeground(QColor("white"))
         ui2.tableWidget.item(1,j).setFont(font)
@@ -1220,6 +1311,12 @@ def checkquestion(question,list):
         if i[1] == question:
             indic = True
     return indic
+    
+def getActivByName(Liste,Name):
+    for i in Liste:
+        if i.getNom() == Name:
+            return i
+    
 
 #########################3ème Page####################       
 app = QApplication(sys.argv)

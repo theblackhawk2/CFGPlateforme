@@ -83,7 +83,8 @@ class Projet:
         self.ListeActivites = ListeActivites
         self.Horizon = Horizon
         self.CPC = CPC
-        self.pasVisualisation = ""
+        self._pasVisualisation = ''
+        self._pasAffichage = ''
         self.DictParams = {"Int couts":{},
                            "Mar couts":{},
                            "Int revenus":{},
@@ -108,6 +109,21 @@ class Projet:
         self.DetteObj = []
         self.ListeInvest = []
         
+    def changerCadence(self):
+        pass
+    
+    def getPasVisualisation(self):
+        return self._pasVisualisation
+    def setPasVisualisation(self,value):
+        self._pasVisualisation = value
+        self._pasAffichage = value
+    def getPasAffichage(self):
+        return self._pasAffichge
+    def setPasAffichage(self):
+        self._pasAffichage = value
+        
+    pasVisualisation = property(getPasVisualisation,setPasVisualisation)
+    pasAffichage     = property(getPasAffichage,setPasAffichage)
     def InitialiserDette(self):
         self.DetteObj = Dette()
         
@@ -118,16 +134,21 @@ class Projet:
             for revenu in activite.getlistRev():
                 revenu.pasVisualisation = self.pasVisualisation
     
+    def changeCalc(self):
+        
     def PrepareExcelInput(self):
         for activite in self.ListeActivites:
             for key in self.DictParams.keys():
                 self.DictParams[key][activite.getNom()] = {}
             for cout in activite.getlistCout():
-                MaxCols = max([i.getTableauAffichage().shape[1] for i in cout.getListTableaux()+cout.getListTableauxMarche()])
-                # Attention au changement du titre
-                self.DictParams['Int couts'][activite.getNom()][cout.getNom()] = ([(T.getTableauAffichage(),T.getTitre()) for T in cout.getListTableaux()],MaxCols) 
-                self.DictParams['Mar couts'][activite.getNom()][cout.getNom()] = ([(T.getTableauAffichage(),T.getTitre()) for T in cout.getListTableauxMarche()],MaxCols)
-        
+                if cout.Type == "Direct":
+                    MaxCols = max([i.getTableauAffichage().shape[1] for i in cout.getListTableaux()+cout.getListTableauxMarche()])
+                    # Attention au changement du titre
+                    self.DictParams['Int couts'][activite.getNom()][cout.getNom()] = ([(T.getTableauAffichage(),T.getTitre()) for T in cout.getListTableaux()],MaxCols) 
+                    self.DictParams['Mar couts'][activite.getNom()][cout.getNom()] = ([(T.getTableauAffichage(),T.getTitre()) for T in cout.getListTableauxMarche()],MaxCols)
+                elif cout.Type == "Indirect" and cout.isFixed == True:
+                    cout.listeTableaux.append(TableauSaisie("Couts fixes",cout.pasVisualisation,"Cout total",Taille = [cout.Horizon,1]))
+                    self.DictParams['Int couts'][activite.getNom()][cout.getNom()] = ([(T.getTableauAffichage(),T.getTitre()) for T in cout.getListTableaux()],3) 
             
             for revenu in activite.getlistRev():
                 MaxColsRev =  max([i.getTableauAffichage().shape[1] for i in revenu.getListTableaux()+revenu.getListTableauxMarche()])
@@ -488,11 +509,17 @@ class Projet:
         
         #cette méthode permet de genere un cpc dans un premier temps en vision anuelle 
         #Section 1 : Ouverture et definition de la taille
+        TypeCPC =            {'M':'CPC Mensuel',
+                              'T':'CPC Trimestriel',
+                              'S':'CPC Semestriel',
+                              'A':'CPC Annuel'}
+        VisualisationPossible = ['M','T','S','A']
+        
         wb = Workbook()
-        wb.create_sheet("CPC")
-        ws=wb['CPC']
-        TotalRevenusOp = [0]*self.Horizon
-        TotalCoutsOp= [0]*self.Horizon
+        wb.create_sheet(TypeCPC[self.pasVisualisation])
+        ws=wb[TypeCPC[self.pasVisualisation]]
+        self.TotalRevenusOp = [0]*self.Horizon
+        self.TotalCoutsOp= [0]*self.Horizon
         ws['A1'] = 'CPC Projet '+self.Nom
         ws['A1'].style = 'Headline 1'
         ws['A4'] = 'PRODUITS D\'EXPLOITATION'
@@ -517,12 +544,12 @@ class Projet:
                 for i in range(Horizon):
                     ws.cell(PCPC,i+2).value = revenu.resultat[i]
                     ws.cell(PCPC,i+2).style = style4_numbers
-                    TotalRevenusOp[i]+=revenu.resultat[i]
+                    self.TotalRevenusOp[i]+=revenu.resultat[i]
                 PCPC +=1
         ws['A'+str(PCPC)].value = 'TOTAL PRODUITS D\'EXPLOITATION'
         ws['A'+str(PCPC)].style = style5
         for i in range(Horizon):
-            ws.cell(PCPC,i+2).value = TotalRevenusOp[i]
+            ws.cell(PCPC,i+2).value = self.TotalRevenusOp[i]
             ws.cell(PCPC,i+2).style = style5_numbers
         PCPC +=1
         ### Section Charges Exploitation
@@ -543,20 +570,20 @@ class Projet:
                 for i in range(Horizon):
                     ws.cell(PCPC,i+2).value = cout.resultat[i]
                     ws.cell(PCPC,i+2).style = style4_numbers
-                    TotalCoutsOp[i]+=cout.resultat[i]
+                    self.TotalCoutsOp[i]+=cout.resultat[i]
                 PCPC +=1
         ws['A'+str(PCPC)].value = 'TOTAL CHARGES D\'EXPLOITATION'
         ws['A'+str(PCPC)].style = style5
         for i in range(Horizon):
-            ws.cell(PCPC,i+2).value = TotalCoutsOp[i]
+            ws.cell(PCPC,i+2).value = self.TotalCoutsOp[i]
             ws.cell(PCPC,i+2).style = style5_numbers
         PCPC +=1
         ws['A'+str(PCPC)].value = 'RESULTAT D\'EXPLOITATION'
         ws['A'+str(PCPC)].style = style6
-        TotalResultatOp = [0]*self.Horizon
+        self.TotalResultatOp = [0]*self.Horizon
         for i in range(Horizon):
-            TotalResultatOp[i] = TotalRevenusOp[i] - TotalCoutsOp[i]
-            ws.cell(PCPC,i+2).value = TotalResultatOp[i]
+            self.TotalResultatOp[i] = self.TotalRevenusOp[i] - self.TotalCoutsOp[i]
+            ws.cell(PCPC,i+2).value = self.TotalResultatOp[i]
             ws.cell(PCPC,i+2).style = style6_numbers
         PCPC +=1
         ###Section Produits Financiers
@@ -607,7 +634,7 @@ class Projet:
         ws['A'+str(PCPC)].style = style6
         self.RAI =[0]*self.Horizon
         for i in range(self.Horizon):
-            self.RAI[i] = TotalResultatOp[i] + ResultatFinancier[i] - self.Amortissements[i]
+            self.RAI[i] = self.TotalResultatOp[i] + ResultatFinancier[i] - self.Amortissements[i]
             ws.cell(PCPC,i+2).value = self.RAI[i]
             ws.cell(PCPC,i+2).style =  style6_numbers
         PCPC += 1
@@ -800,7 +827,7 @@ class Cpc:
     
 #Definition des classes couts et activtés
 class Cout:
-    def __init__(self,Nom = "", Horizon=0,SaisieStartCol = 1,CoutCPC = []):
+    def __init__(self,Nom = "", Horizon=0,SaisieStartCol = 1,CoutCPC = [],Type = "Direct"):
         self.Nom     = Nom
         self.Horizon = Horizon
         self.CoutCPC = CoutCPC
@@ -814,7 +841,8 @@ class Cout:
         self.VEchantillon = []
         self.DicoFormes = {}
         self.DicoFormesMarche = {}
-        
+        self.isLinked = False
+        self.Type = Type
     def resizeTableauxMarche(self):
         for titre in self.DicoFormesMarche.keys():
             self.listeTableauxMarche.append(TableauSaisie(titre,self.DicoFormesMarche[titre]['IntituleLigne'],self.DicoFormesMarche[titre]['IntituleColonne'],[self.DicoFormesMarche[titre]['Taille0'],self.DicoFormesMarche[titre]['Taille1']]))
@@ -1101,7 +1129,7 @@ class Revenu:
                     if ws['B'+str(cell.row)].value == 'int':
                         Titres.append(ws['A'+str(cell.row)].value)
                         print(Titres)
-        wsTableau = wb['Tableau x Features rev'] #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        wsTableau = wb['Tableau x Features rev'] 
         for j in Titres:
             for col in wsTableau.iter_cols(min_row=2,min_col=2, max_col=23, max_row=2):
                 for cell in col:
@@ -1137,7 +1165,7 @@ class Revenu:
                     if ws['B'+str(cell.row)].value == 'int':
                         Titres.append(ws['A'+str(cell.row)].value)
                         print(Titres)
-        wsTableau = wb['Tableau x Features rev'] #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        wsTableau = wb['Tableau x Features rev'] 
         Formulaire = []
         for j in Titres:
             self.DicoFormes[j] ={}
@@ -1274,7 +1302,7 @@ class Revenu:
         CalculerRevenu(self)
         pass
 
-class Dette:    #Nouvelle classe #### Standby
+class Dette:   #Nouvelle classe #### Standby
     def __init__(self, bailleur="", total=0, taux=0):
         self.periodicite = ' '   #LIER avec inputs intérface
         self.horizon = 0       #LIER avec inputs intérface
