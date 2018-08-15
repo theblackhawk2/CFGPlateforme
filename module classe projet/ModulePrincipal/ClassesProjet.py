@@ -83,8 +83,8 @@ class Projet:
         self.ListeActivites = ListeActivites
         self.Horizon = Horizon
         self.CPC = CPC
-        self._pasVisualisation = ''
-        self._pasAffichage = ''
+        self.pasVisualisation = ''
+        self.pasAffichage = ''
         self.DictParams = {"Int couts":{},
                            "Mar couts":{},
                            "Int revenus":{},
@@ -97,7 +97,7 @@ class Projet:
         self.ChargesFinancieres = []
         self.Interets = []
         self.Amortissements = []
-        self.RAI = []
+        self.RAI = {}
         self.Impots = []
         self.ResultatNet = []
         self.FondsPropres = []
@@ -112,18 +112,18 @@ class Projet:
     def changerCadence(self):
         pass
     
-    def getPasVisualisation(self):
-        return self._pasVisualisation
-    def setPasVisualisation(self,value):
-        self._pasVisualisation = value
-        self._pasAffichage = value
-    def getPasAffichage(self):
-        return self._pasAffichge
-    def setPasAffichage(self):
-        self._pasAffichage = value
-        
-    pasVisualisation = property(getPasVisualisation,setPasVisualisation)
-    pasAffichage     = property(getPasAffichage,setPasAffichage)
+    # def getPasVisualisation(self):
+    #     return self._pasVisualisation
+    # def setPasVisualisation(self,value):
+    #     self._pasVisualisation = value
+    #     self._pasAffichage = value
+    # def getPasAffichage(self):
+    #     return self._pasAffichge
+    # def setPasAffichage(self):
+    #     self._pasAffichage = value
+    #     
+    # pasVisualisation = property(getPasVisualisation,setPasVisualisation)
+    # pasAffichage     = property(getPasAffichage,setPasAffichage)
     def InitialiserDette(self):
         self.DetteObj = Dette()
         
@@ -134,7 +134,6 @@ class Projet:
             for revenu in activite.getlistRev():
                 revenu.pasVisualisation = self.pasVisualisation
     
-    def changeCalc(self):
         
     def PrepareExcelInput(self):
         for activite in self.ListeActivites:
@@ -218,9 +217,6 @@ class Projet:
     def CommencerSaisie(self):
         pass
     def GenerateTFT(self):
-        wb = Workbook()
-        wb.create_sheet("TFT")
-        ws=wb['TFT']
         style1 = NamedStyle(name="style1")
         style1.font = Font(name="Calibri",bold="True",size=13,color="FFFFFF")
         style1.alignment = Alignment(horizontal = "center", vertical = "center")
@@ -279,173 +275,183 @@ class Projet:
         style6_numbers.font = Font(name="Calibri",bold="True",size=11,color="FFFFFF")
         style6_numbers.alignment = Alignment(horizontal = "center", vertical = "center",indent = 0)
         style6_numbers.fill = PatternFill("solid",fgColor="C00000")
-        ws['A1'].value= 'TFT Projet '+self.Nom
-        ws['A1'].style = 'Headline 1'
-        for i in range(self.Horizon):
-            ws.cell(3,i+2).value = self.pasVisualisation+str(i+1)
-            ws.cell(3,i+2).style = style1
-       
-        PTFT = 4
-        ws.cell(PTFT,1).value = "Flux du Projet"
-        ws.cell(PTFT,1).style = style2
-        for i in range(self.Horizon):
-            ws.cell(PTFT,i+2).value = ""
-            ws.cell(PTFT,i+2).style = style2
-        PTFT += 1
-        #### Resultat Avant Impot
-        ws.cell(PTFT,1).value = "Resultat Avant Impôts"
-        ws.cell(PTFT,1).style = style4
-        for i in range(self.Horizon):
-            ws.cell(PTFT,i+2).value = self.RAI[i]
-            ws.cell(PTFT,i+2).style = style4_numbers
-        PTFT += 1
-        # # # # # IS
-        ws.cell(PTFT,1).value = "IS"
-        ws.cell(PTFT,1).style = style4
-        for i in range(self.Horizon):
-            ws.cell(PTFT,i+2).value = self.Impots[i]
-            ws.cell(PTFT,i+2).style = style4_numbers
-        PTFT += 1
-        # # # # # Ammortissement
-        self.Amortissement = [0]*self.Horizon
-        ws.cell(PTFT,1).value = "Amortissement"
-        ws.cell(PTFT,1).style = style4
-        for i in range(self.Horizon):
-            ws.cell(PTFT,i+2).value = self.Amortissement[i]
-            ws.cell(PTFT,i+2).style = style4_numbers
-        PTFT += 1
-        # # # # # Variation BFR
-        self.VBFR = [0]*self.Horizon
-        ws.cell(PTFT,1).value = "Variation BFR"
-        ws.cell(PTFT,1).style = style4
-        for i in range(self.Horizon):
-            ws.cell(PTFT,i+2).value = self.VBFR[i]
-            ws.cell(PTFT,i+2).style = style4_numbers
-        PTFT += 1
-        ##### Flux Invesstissement
-        ws.cell(PTFT,1).value = "Flux d'Invesstissement"
-        ws.cell(PTFT,1).style = style2
-        for i in range(self.Horizon):
-            ws.cell(PTFT,i+2).value = ""
-            ws.cell(PTFT,i+2).style = style2
-        PTFT += 1
-        for i in range(len(self.ListeInvest)):
-            ws.cell(PTFT,1).value = self.ListeInvest[i][0]
+        TypeTFT =            {'M':'TFT Mensuel',
+                              'T':'TFT Trimestriel',
+                              'S':'TFT Semestriel',
+                              'A':'TFT Annuel'}
+        Visualisation = ['M','T','S','A']
+        VisualisationPossible = Visualisation[Visualisation.index(self.pasVisualisation):]
+        wb = Workbook()
+        while len(VisualisationPossible) != 0:
+            Pas = VisualisationPossible.pop(0)
+            self.pasAffichage = Pas
+            wb.create_sheet(TypeTFT[Pas])
+            ws=wb[TypeTFT[Pas]]
+            Horizon = convertir_Taille(self.Horizon,self.pasVisualisation,Pas)[0]
+            step = convertir_Taille(self.Horizon,self.pasVisualisation,Pas)[1]
+            ws['A1'].value= 'TFT Projet '+self.Nom
+            ws['A1'].style = 'Headline 1'
+            for i in range(Horizon):
+                ws.cell(3,i+2).value = Pas+str(i+1)
+                ws.cell(3,i+2).style = style1
+        
+            PTFT = 4
+            ws.cell(PTFT,1).value = "Flux du Projet"
+            ws.cell(PTFT,1).style = style2
+            for i in range(Horizon):
+                ws.cell(PTFT,i+2).value = ""
+                ws.cell(PTFT,i+2).style = style2
+            PTFT += 1
+            #### Resultat Avant Impot
+            ws.cell(PTFT,1).value = "Resultat Avant Impôts"
             ws.cell(PTFT,1).style = style4
-            for j in range(1,self.Horizon+1):
-                if j < len(self.ListeInvest[i]):
-                    ws.cell(PTFT,j+1).value = self.ListeInvest[i][j]
-                    ws.cell(PTFT,j+1).style = style4_numbers 
-                else:
-                    ws.cell(PTFT,j+1).value = 0
-                    self.ListeInvest[i].append(0)
-                    ws.cell(PTFT,j+1).style = style4_numbers 
+            for i in range(Horizon):
+                ws.cell(PTFT,i+2).value = self.RAI[Pas][i]
+                ws.cell(PTFT,i+2).style = style4_numbers
             PTFT += 1
-
-        ##### Flux de financement
-        ws.cell(PTFT,1).value = "Flux de financement"
-        ws.cell(PTFT,1).style = style2
-        for i in range(self.Horizon):
-            ws.cell(PTFT,i+2).value = ""
-            ws.cell(PTFT,i+2).style = style2
-        PTFT += 1
-        # # # # # Fonds Propres Injectés
-        l = [0]*self.Horizon
-        ws.cell(PTFT,1).value = "Fond Propres"
-        ws.cell(PTFT,1).style = style4
-        for i in range(len(self.FondsPropres)):
-            l[i] = self.FondsPropres[i]
-        self.FondsPropres = l.copy()
-        for i in range(self.Horizon):
-            ws.cell(PTFT,i+2).value = self.FondsPropres[i]
-            ws.cell(PTFT,i+2).style = style4_numbers
-        
-        PTFT += 1
-        # # # # # Levée de Dette
-        l = [0]*self.Horizon
-        ws.cell(PTFT,1).value = "Levée de Dette"
-        ws.cell(PTFT,1).style = style4
-        
-        for i in range(len(self.Dette)):
-            l[i] = self.Dette[i]
-        self.Dette = l.copy()
-        for i in range(self.Horizon):
-            ws.cell(PTFT,i+2).value = self.Dette[i]
-            ws.cell(PTFT,i+2).style = style4_numbers
-        
-        PTFT += 1
-        # # # # Apport en CCA
-        ws.cell(PTFT,1).value = "Apport en CCA"
-        ws.cell(PTFT,1).style = style4
-        for i in range(len(self.CCA)):
-            l[i] = self.CCA[i]
-        self.CCA = l.copy()
-        for i in range(self.Horizon):
-            ws.cell(PTFT,i+2).value = self.CCA[i]
-            ws.cell(PTFT,i+2).style = style4_numbers
-        
-        PTFT += 1
-        # # # # # Remboursement de la dette (Capital)
-        self.RemboursementDette = [0]*self.Horizon
-        ws.cell(PTFT,1).value = "Remboursement de la dette"
-        ws.cell(PTFT,1).style = style4
-        for i in range(self.Horizon):
-            ws.cell(PTFT,i+2).value = self.RemboursementDette[i]
-            ws.cell(PTFT,i+2).style = style4_numbers
-        PTFT += 1
-        # # # # # Remboursement du CCA
-        self.RemboursementCCA = [0]*self.Horizon
-        ws.cell(PTFT,1).value = "Remboursement CCA"
-        ws.cell(PTFT,1).style = style4
-        for i in range(self.Horizon):
-            ws.cell(PTFT,i+2).value = self.RemboursementCCA[i]
-            ws.cell(PTFT,i+2).style = style4_numbers
-        PTFT += 1
-        # # # # # Distribution de dividendes
-        self.RemboursementDividendes = [0]*self.Horizon
-        ws.cell(PTFT,1).value = "Distribution Dividendes"
-        ws.cell(PTFT,1).style = style4
-        for i in range(self.Horizon):
-            ws.cell(PTFT,i+2).value = self.RemboursementDividendes[i]
-            ws.cell(PTFT,i+2).style = style4_numbers
-        PTFT += 1
-        # # # # # # Interets financiers
-        # ws.cell(PTFT,1).value = "Interets financiers"
-        # ws.cell(PTFT,1).style = style3
-        # for i in range(self.Horizon):
-        #     ws.cell(PTFT,i+2).value = self.Interets[i]
-        #     ws.cell(PTFT,i+2).style = style3_numbers
-        # PTFT += 1
-        # # # # # Flux de trésorerie
-        ws.cell(PTFT,1).value = "Flux de trésorerie"
-        ws.cell(PTFT,1).style = style2
-        self.FluxTresorerie = [0]*self.Horizon
-        Investissements = [sum(item) for item in zip(*[i[1:] for i in self.ListeInvest])]
-        if len(Investissements) !=0:
-            for i in range(self.Horizon):
-                self.FluxTresorerie[i] = self.RAI[i]-self.Impots[i]+self.Amortissements[i]+self.VBFR[i]-Investissements[i]+self.FondsPropres[i]+self.Dette[i]+self.CCA[i]-self.RemboursementDette[i]-self.RemboursementCCA[i]-self.RemboursementDividendes[i]
-                ws.cell(PTFT,i+2).value = self.FluxTresorerie[i]
-                ws.cell(PTFT,i+2).style = style2_numbers
+            # # # # # IS
+            ws.cell(PTFT,1).value = "IS"
+            ws.cell(PTFT,1).style = style4
+            self.Impots[Pas] = IS(self,Pas)
+            for i in range(Horizon):
+                ws.cell(PTFT,i+2).value = self.Impots[Pas][i]
+                ws.cell(PTFT,i+2).style = style4_numbers
             PTFT += 1
-        else:
-            for i in range(self.Horizon):
-                self.FluxTresorerie[i] = self.RAI[i]-self.Impots[i]+self.Amortissements[i]+self.VBFR[i]+self.FondsPropres[i]+self.Dette[i]+self.CCA[i]-self.RemboursementDette[i]-self.RemboursementCCA[i]-self.RemboursementDividendes[i]
-                ws.cell(PTFT,i+2).value = self.FluxTresorerie[i]
-                ws.cell(PTFT,i+2).style = style2_numbers
+            # # # # # Ammortissement
+            self.Amortissement = [0]*self.Horizon
+            ws.cell(PTFT,1).value = "Amortissement"
+            ws.cell(PTFT,1).style = style4
+            for i in range(Horizon):
+                ws.cell(PTFT,i+2).value = sum(self.Amortissement[i*step:min(((i+1)*step),self.Horizon)])
+                ws.cell(PTFT,i+2).style = style4_numbers
             PTFT += 1
-        # # # # # Trésorerie accumulée
-        ws.cell(PTFT,1).value = "Trésorerie Accumulée"
-        ws.cell(PTFT,1).style = style2
-        self.FluxTresorerieAcc = [0]*self.Horizon
-        for i in range(self.Horizon):
-            if i == 0:
-                self.FluxTresorerieAcc[i] = self.FluxTresorerie[i]
-                ws.cell(PTFT,i+2).value = self.FluxTresorerieAcc[i]
+            # # # # # Variation BFR
+            self.VBFR = [0]*self.Horizon
+            ws.cell(PTFT,1).value = "Variation BFR"
+            ws.cell(PTFT,1).style = style4
+            for i in range(Horizon):
+                ws.cell(PTFT,i+2).value = sum(self.VBFR[i*step:min(((i+1)*step),self.Horizon)])
+                ws.cell(PTFT,i+2).style = style4_numbers
+            PTFT += 1
+            ##### Flux Invesstissement
+            ws.cell(PTFT,1).value = "Flux d'Invesstissement"
+            ws.cell(PTFT,1).style = style2
+            for i in range(Horizon):
+                ws.cell(PTFT,i+2).value = ""
+                ws.cell(PTFT,i+2).style = style2
+            PTFT += 1
+            for i in range(len(self.ListeInvest)):
+                self.ListeInvest[i] += [0]*(self.Horizon-len(self.ListeInvest[i])+1)
+                ws.cell(PTFT,1).value = self.ListeInvest[i][0]
+                ws.cell(PTFT,1).style = style4
+                for j in range(0,Horizon):
+                        ws.cell(PTFT,j+2).value = sum(self.ListeInvest[i][1:][j*step:min(((j+1)*step),self.Horizon)])
+                        ws.cell(PTFT,j+2).style = style4_numbers
+                PTFT += 1
+            ##### Flux de financement
+            ws.cell(PTFT,1).value = "Flux de financement"
+            ws.cell(PTFT,1).style = style2
+            for i in range(Horizon):
+                ws.cell(PTFT,i+2).value = ""
+                ws.cell(PTFT,i+2).style = style2
+            PTFT += 1
+            # # # # # Fonds Propres Injectés
+            l = [0]*self.Horizon
+            ws.cell(PTFT,1).value = "Fond Propres"
+            ws.cell(PTFT,1).style = style4
+            for i in range(len(self.FondsPropres)):
+                l[i] = self.FondsPropres[i]
+            self.FondsPropres = l.copy()
+            for i in range(Horizon):
+                ws.cell(PTFT,i+2).value = sum(self.FondsPropres[i*step:min(((i+1)*step),self.Horizon)])
+                ws.cell(PTFT,i+2).style = style4_numbers
+            
+            PTFT += 1
+            # # # # # Levée de Dette
+            l = [0]*self.Horizon
+            ws.cell(PTFT,1).value = "Levée de Dette"
+            ws.cell(PTFT,1).style = style4
+            
+            for i in range(len(self.Dette)):
+                l[i] = self.Dette[i]
+            self.Dette = l.copy()
+            for i in range(Horizon):
+                ws.cell(PTFT,i+2).value = sum(self.Dette[i*step:min(((i+1)*step),self.Horizon)])
+                ws.cell(PTFT,i+2).style = style4_numbers
+            
+            PTFT += 1
+            # # # # Apport en CCA
+            ws.cell(PTFT,1).value = "Apport en CCA"
+            ws.cell(PTFT,1).style = style4
+            for i in range(len(self.CCA)):
+                l[i] = self.CCA[i]
+            self.CCA = l.copy()
+            for i in range(Horizon):
+                ws.cell(PTFT,i+2).value = sum(self.CCA[i*step:min(((i+1)*step),self.Horizon)])
+                ws.cell(PTFT,i+2).style = style4_numbers
+            
+            PTFT += 1
+            # # # # # Remboursement de la dette (Capital)
+            self.RemboursementDette = [0]*self.Horizon
+            ws.cell(PTFT,1).value = "Remboursement de la dette"
+            ws.cell(PTFT,1).style = style4
+            for i in range(Horizon):
+                ws.cell(PTFT,i+2).value = sum(self.RemboursementDette[i*step:min(((i+1)*step),self.Horizon)])
+                ws.cell(PTFT,i+2).style = style4_numbers
+            PTFT += 1
+            # # # # # Remboursement du CCA
+            self.RemboursementCCA = [0]*self.Horizon
+            ws.cell(PTFT,1).value = "Remboursement CCA"
+            ws.cell(PTFT,1).style = style4
+            for i in range(Horizon):
+                ws.cell(PTFT,i+2).value = sum(self.RemboursementCCA[i*step:min(((i+1)*step),self.Horizon)])
+                ws.cell(PTFT,i+2).style = style4_numbers
+            PTFT += 1
+            # # # # # Distribution de dividendes
+            self.RemboursementDividendes = [0]*self.Horizon
+            ws.cell(PTFT,1).value = "Distribution Dividendes"
+            ws.cell(PTFT,1).style = style4
+            for i in range(Horizon):
+                ws.cell(PTFT,i+2).value = sum(self.RemboursementDividendes[i*step:min(((i+1)*step),self.Horizon)])
+                ws.cell(PTFT,i+2).style = style4_numbers
+            PTFT += 1
+            # # # # # # Interets financiers
+            # ws.cell(PTFT,1).value = "Interets financiers"
+            # ws.cell(PTFT,1).style = style3
+            # for i in range(self.Horizon):
+            #     ws.cell(PTFT,i+2).value = self.Interets[i]
+            #     ws.cell(PTFT,i+2).style = style3_numbers
+            # PTFT += 1
+            # # # # # Flux de trésorerie
+            ws.cell(PTFT,1).value = "Flux de trésorerie"
+            ws.cell(PTFT,1).style = style2
+            self.FluxTresorerie = [0]*Horizon
+            Investissements = [sum(item) for item in zip(*[i[1:] for i in self.ListeInvest])]
+            if len(Investissements) !=0:
+                for i in range(Horizon):
+                    self.FluxTresorerie[i] = self.RAI[Pas][i]-self.Impots[Pas][i]+sum(self.Amortissements[i*step:min(((i+1)*step),self.Horizon)])+sum(self.VBFR[i*step:min(((i+1)*step),self.Horizon)])-sum(Investissements[i*step:min(((i+1)*step),self.Horizon)])+sum(self.FondsPropres[i*step:min(((i+1)*step),self.Horizon)])+sum(self.Dette[i*step:min(((i+1)*step),self.Horizon)])+sum(self.CCA[i*step:min(((i+1)*step),self.Horizon)])-sum(self.RemboursementDette[i*step:min(((i+1)*step),self.Horizon)])-sum(self.RemboursementCCA[i*step:min(((i+1)*step),self.Horizon)])-sum(self.RemboursementDividendes[i*step:min(((i+1)*step),self.Horizon)])
+                    ws.cell(PTFT,i+2).value = self.FluxTresorerie[i]
+                    ws.cell(PTFT,i+2).style = style2_numbers
+                PTFT += 1
             else:
-                self.FluxTresorerieAcc[i] = self.FluxTresorerieAcc[i-1] + self.FluxTresorerie[i]
-                ws.cell(PTFT,i+2).value = self.FluxTresorerieAcc[i]
-            ws.cell(PTFT,i+2).style = style2_numbers
-        PTFT += 1
+                for i in range(self.Horizon):
+                    self.FluxTresorerie[i] = self.RAI[Pas][i]-self.Impots[Pas][i]+sum(self.Amortissements[i*step:min(((i+1)*step),self.Horizon)])+sum(self.VBFR[i*step:min(((i+1)*step),self.Horizon)])+sum(self.FondsPropres[i*step:min(((i+1)*step),self.Horizon)])+sum(self.Dette[i*step:min(((i+1)*step),self.Horizon)])+sum(self.CCA[i*step:min(((i+1)*step),self.Horizon)])-sum(self.RemboursementDette[i*step:min(((i+1)*step),self.Horizon)])-sum(self.RemboursementCCA[i*step:min(((i+1)*step),self.Horizon)])-sum(self.RemboursementDividendes[i*step:min(((i+1)*step),self.Horizon)])
+                    ws.cell(PTFT,i+2).value = self.FluxTresorerie[i]
+                    ws.cell(PTFT,i+2).style = style2_numbers
+                PTFT += 1
+            # # # # # Trésorerie accumulée
+            ws.cell(PTFT,1).value = "Trésorerie Accumulée"
+            ws.cell(PTFT,1).style = style2
+            self.FluxTresorerieAcc = [0]*Horizon
+            for i in range(Horizon):
+                if i == 0:
+                    self.FluxTresorerieAcc[i] = self.FluxTresorerie[i]
+                    ws.cell(PTFT,i+2).value = self.FluxTresorerieAcc[i]
+                else:
+                    self.FluxTresorerieAcc[i] = self.FluxTresorerieAcc[i-1] + self.FluxTresorerie[i]
+                    ws.cell(PTFT,i+2).value = self.FluxTresorerieAcc[i]
+                ws.cell(PTFT,i+2).style = style2_numbers
+            PTFT += 1
         wb.remove(wb['Sheet'])
         wb.save("tft.xlsx")
     def GenerateCPC(self):
@@ -513,149 +519,154 @@ class Projet:
                               'T':'CPC Trimestriel',
                               'S':'CPC Semestriel',
                               'A':'CPC Annuel'}
-        VisualisationPossible = ['M','T','S','A']
-        
+        Visualisation = ['M','T','S','A']
+        VisualisationPossible = Visualisation[Visualisation.index(self.pasVisualisation):]
         wb = Workbook()
-        wb.create_sheet(TypeCPC[self.pasVisualisation])
-        ws=wb[TypeCPC[self.pasVisualisation]]
-        self.TotalRevenusOp = [0]*self.Horizon
-        self.TotalCoutsOp= [0]*self.Horizon
-        ws['A1'] = 'CPC Projet '+self.Nom
-        ws['A1'].style = 'Headline 1'
-        ws['A4'] = 'PRODUITS D\'EXPLOITATION'
-        ws['A4'].style = style2
-        for i in range(self.Horizon):
-            ws.cell(4,i+2).style = style2
-        Horizon = self.Horizon
-        for i in range(Horizon):
-            ws.cell(3,i+2).value = self.pasVisualisation+str(i+1)
-            ws.cell(3,i+2).style = style1 
-        ####Section Produits d'exploitation
-        PCPC = 5
-        for activite in self.ListeActivites:
-            ws['A'+str(PCPC)].value = activite.getNom()
-            ws['A'+str(PCPC)].style = style3
+        while len(VisualisationPossible) != 0:
+            Pas = VisualisationPossible.pop(0)
+            self.pasAffichage = Pas
+            wb.create_sheet(TypeCPC[Pas])
+            ws=wb[TypeCPC[Pas]]
+            self.TotalRevenusOp = [0]*convertir_Taille(self.Horizon,self.pasVisualisation,Pas)[0]
+            self.TotalCoutsOp= [0]*convertir_Taille(self.Horizon,self.pasVisualisation,Pas)[0]
+            ws['A1'] = 'CPC Projet '+self.Nom
+            ws['A1'].style = 'Headline 1'
+            ws['A4'] = 'PRODUITS D\'EXPLOITATION'
+            ws['A4'].style = style2
+            step = convertir_Taille(self.Horizon,self.pasVisualisation,Pas)[1]
+            for i in range(convertir_Taille(self.Horizon,self.pasVisualisation,Pas)[0]):
+                ws.cell(4,i+2).style = style2
+            Horizon = convertir_Taille(self.Horizon,self.pasVisualisation,Pas)[0]
             for i in range(Horizon):
-                ws.cell(PCPC,i+2).style = style3
-            PCPC += 1
-            for revenu in activite.getlistRev():
-                ws['A'+str(PCPC)].value = revenu.getNom()
-                ws['A'+str(PCPC)].style = style4
+                ws.cell(3,i+2).value = Pas+str(i+1)
+                ws.cell(3,i+2).style = style1 
+            ####Section Produits d'exploitation
+            PCPC = 5
+            for activite in self.ListeActivites:
+                ws['A'+str(PCPC)].value = activite.getNom()
+                ws['A'+str(PCPC)].style = style3
                 for i in range(Horizon):
-                    ws.cell(PCPC,i+2).value = revenu.resultat[i]
-                    ws.cell(PCPC,i+2).style = style4_numbers
-                    self.TotalRevenusOp[i]+=revenu.resultat[i]
-                PCPC +=1
-        ws['A'+str(PCPC)].value = 'TOTAL PRODUITS D\'EXPLOITATION'
-        ws['A'+str(PCPC)].style = style5
-        for i in range(Horizon):
-            ws.cell(PCPC,i+2).value = self.TotalRevenusOp[i]
-            ws.cell(PCPC,i+2).style = style5_numbers
-        PCPC +=1
-        ### Section Charges Exploitation
-        ws['A'+str(PCPC)].value = 'CHARGES D\'EXPLOITATION'
-        ws['A'+str(PCPC)].style = style2
-        for i in range(self.Horizon):
-            ws.cell(PCPC,i+2).style = style2
-        PCPC +=1
-        for activite in self.ListeActivites:
-            ws['A'+str(PCPC)].value = activite.getNom()
-            ws['A'+str(PCPC)].style = style3
-            for i in range(self.Horizon):
-                ws.cell(PCPC,i+2).style = style3
-            PCPC += 1
-            for cout in activite.getlistCout():
-                ws['A'+str(PCPC)].value = cout.getNom()
-                ws['A'+str(PCPC)].style = style4
+                    ws.cell(PCPC,i+2).style = style3
+                PCPC += 1
+                for revenu in activite.getlistRev():
+                    ws['A'+str(PCPC)].value = revenu.getNom()
+                    ws['A'+str(PCPC)].style = style4
+                    for i in range(Horizon):
+                        ws.cell(PCPC,i+2).value = sum(revenu.resultat[i*step:min(((i+1)*step),self.Horizon)])
+                        ws.cell(PCPC,i+2).style = style4_numbers
+                        self.TotalRevenusOp[i]+=sum(revenu.resultat[i*step:min(((i+1)*step),self.Horizon)])
+                    PCPC +=1
+            ws['A'+str(PCPC)].value = 'TOTAL PRODUITS D\'EXPLOITATION'
+            ws['A'+str(PCPC)].style = style5
+            for i in range(Horizon):
+                ws.cell(PCPC,i+2).value = self.TotalRevenusOp[i]
+                ws.cell(PCPC,i+2).style = style5_numbers
+            PCPC +=1
+            ### Section Charges Exploitation
+            ws['A'+str(PCPC)].value = 'CHARGES D\'EXPLOITATION'
+            ws['A'+str(PCPC)].style = style2
+            for i in range(Horizon):
+                ws.cell(PCPC,i+2).style = style2
+            PCPC +=1
+            for activite in self.ListeActivites:
+                ws['A'+str(PCPC)].value = activite.getNom()
+                ws['A'+str(PCPC)].style = style3
                 for i in range(Horizon):
-                    ws.cell(PCPC,i+2).value = cout.resultat[i]
-                    ws.cell(PCPC,i+2).style = style4_numbers
-                    self.TotalCoutsOp[i]+=cout.resultat[i]
-                PCPC +=1
-        ws['A'+str(PCPC)].value = 'TOTAL CHARGES D\'EXPLOITATION'
-        ws['A'+str(PCPC)].style = style5
-        for i in range(Horizon):
-            ws.cell(PCPC,i+2).value = self.TotalCoutsOp[i]
-            ws.cell(PCPC,i+2).style = style5_numbers
-        PCPC +=1
-        ws['A'+str(PCPC)].value = 'RESULTAT D\'EXPLOITATION'
-        ws['A'+str(PCPC)].style = style6
-        self.TotalResultatOp = [0]*self.Horizon
-        for i in range(Horizon):
-            self.TotalResultatOp[i] = self.TotalRevenusOp[i] - self.TotalCoutsOp[i]
-            ws.cell(PCPC,i+2).value = self.TotalResultatOp[i]
-            ws.cell(PCPC,i+2).style = style6_numbers
-        PCPC +=1
-        ###Section Produits Financiers
-        ws['A'+str(PCPC)].value = 'PRODUITS FINANCIERS'
-        ws['A'+str(PCPC)].style = style2
-        self.ProduitsFinanciers = [0]*self.Horizon
-        for i in range(self.Horizon):
-            ws.cell(PCPC,i+2).value = self.ProduitsFinanciers[i]
-            ws.cell(PCPC,i+2).style = style2_numbers
-        PCPC +=1
-        ###Section Charges Financières
-        ws['A'+str(PCPC)].value = 'CHARGES FINANCIERES'
-        ws['A'+str(PCPC)].style = style2
-        self.Interets = [0]*self.Horizon
-        for i in range(self.Horizon):
-            ws.cell(PCPC,i+2).style = style2
-        PCPC +=1
-        ws['A'+str(PCPC)].value = 'Intêrets'
-        ws['A'+str(PCPC)].style = style4
-        for i in range(self.Horizon):
-            ws.cell(PCPC,i+2).value = self.Interets[i]
-            ws.cell(PCPC,i+2).style = style4_numbers
-        PCPC +=1
-        ###Section Resultat Financiers
-        ws['A'+str(PCPC)].value = 'RESULTAT FINANCIER'
-        ws['A'+str(PCPC)].style = style6
-        ResultatFinancier = [0]*self.Horizon
-        for i in range(self.Horizon):
-            ResultatFinancier[i] = self.ProduitsFinanciers[i] - self.Interets[i]
-            ws.cell(PCPC,i+2).style = style6_numbers
-        PCPC += 1
-        ###Section Dotations
-        ws['A'+str(PCPC)].value = 'DOTATIONS'
-        ws['A'+str(PCPC)].style = style2
-        for i in range(self.Horizon):
-            ws.cell(PCPC,i+2).style = style2
-        PCPC += 1
-        ws['A'+str(PCPC)].value = 'Amortissements'
-        ws['A'+str(PCPC)].style = style4
-        self.Amortissements = [0]*self.Horizon
-        for i in range(self.Horizon):
-            ws.cell(PCPC,i+2).value = self.Amortissements[i]
-            ws.cell(PCPC,i+2).style = style4_numbers
-        PCPC +=1
-        
-        ###Section Resultat avant Impots
-        ws['A'+str(PCPC)].value = 'RESULTAT AVANT IMPOT'
-        ws['A'+str(PCPC)].style = style6
-        self.RAI =[0]*self.Horizon
-        for i in range(self.Horizon):
-            self.RAI[i] = self.TotalResultatOp[i] + ResultatFinancier[i] - self.Amortissements[i]
-            ws.cell(PCPC,i+2).value = self.RAI[i]
-            ws.cell(PCPC,i+2).style =  style6_numbers
-        PCPC += 1
-        
-        ###Section Impôts
-        ws['A'+str(PCPC)].value = 'IMPÔTS'
-        ws['A'+str(PCPC)].style = style2
-        self.Impots = IS(self)
-        for i in range(self.Horizon):
-            ws.cell(PCPC,i+2).value = self.Impots[i]
-            ws.cell(PCPC,i+2).style = style2_numbers
-        PCPC += 1 
-           
-        ###Section Resultats nets
-        ws['A'+str(PCPC)].value = 'RESULTAT NET'
-        ws['A'+str(PCPC)].style = style6
-        self.ResultatNet = [0]*self.Horizon
-        for i in range(self.Horizon):
-            self.ResultatNet[i] = self.RAI[i] - self.Impots[i]
-            ws.cell(PCPC,i+2).value = self.ResultatNet[i]
-            ws.cell(PCPC,i+2).style = style6_numbers
+                    ws.cell(PCPC,i+2).style = style3
+                PCPC += 1
+                for cout in activite.getlistCout():
+                    ws['A'+str(PCPC)].value = cout.getNom()
+                    ws['A'+str(PCPC)].style = style4
+                    for i in range(Horizon):
+                        ws.cell(PCPC,i+2).value = sum(cout.resultat[i*step:min(((i+1)*step),self.Horizon)])
+                        ws.cell(PCPC,i+2).style = style4_numbers
+                        self.TotalCoutsOp[i]+=sum(cout.resultat[i*step:min(((i+1)*step),self.Horizon)])
+                    PCPC +=1
+            ws['A'+str(PCPC)].value = 'TOTAL CHARGES D\'EXPLOITATION'
+            ws['A'+str(PCPC)].style = style5
+            for i in range(Horizon):
+                ws.cell(PCPC,i+2).value = self.TotalCoutsOp[i]
+                ws.cell(PCPC,i+2).style = style5_numbers
+            PCPC +=1
+            ws['A'+str(PCPC)].value = 'RESULTAT D\'EXPLOITATION'
+            ws['A'+str(PCPC)].style = style6
+            self.TotalResultatOp = [0]*Horizon
+            for i in range(Horizon):
+                self.TotalResultatOp[i] = self.TotalRevenusOp[i] - self.TotalCoutsOp[i]
+                ws.cell(PCPC,i+2).value = self.TotalResultatOp[i]
+                ws.cell(PCPC,i+2).style = style6_numbers
+            PCPC +=1
+            ###Section Produits Financiers
+            ws['A'+str(PCPC)].value = 'PRODUITS FINANCIERS'
+            ws['A'+str(PCPC)].style = style2
+            self.ProduitsFinanciers = [0]*self.Horizon
+            for i in range(Horizon):
+                ws.cell(PCPC,i+2).value = sum(self.ProduitsFinanciers[i*step:min(((i+1)*step),self.Horizon)])
+                ws.cell(PCPC,i+2).style = style2_numbers
+            PCPC +=1
+            ###Section Charges Financières
+            ws['A'+str(PCPC)].value = 'CHARGES FINANCIERES'
+            ws['A'+str(PCPC)].style = style2
+            self.Interets = [0]*self.Horizon
+            for i in range(Horizon):
+                ws.cell(PCPC,i+2).style = style2
+            PCPC +=1
+            ws['A'+str(PCPC)].value = 'Intêrets'
+            ws['A'+str(PCPC)].style = style4
+            for i in range(Horizon):
+                ws.cell(PCPC,i+2).value = sum(self.Interets[i*step:min(((i+1)*step),self.Horizon)])
+                ws.cell(PCPC,i+2).style = style4_numbers
+            PCPC +=1
+            ###Section Resultat Financiers
+            ws['A'+str(PCPC)].value = 'RESULTAT FINANCIER'
+            ws['A'+str(PCPC)].style = style6
+            ResultatFinancier = [0]*Horizon
+            for i in range(Horizon):
+                ResultatFinancier[i] = sum(self.ProduitsFinanciers[i*step:min(((i+1)*step),self.Horizon)]) - sum(self.Interets[i*step:min(((i+1)*step),self.Horizon)])
+                ws.cell(PCPC,i+2).style = style6_numbers
+            PCPC += 1
+            ###Section Dotations
+            ws['A'+str(PCPC)].value = 'DOTATIONS'
+            ws['A'+str(PCPC)].style = style2
+            for i in range(Horizon):
+                ws.cell(PCPC,i+2).style = style2
+            PCPC += 1
+            ws['A'+str(PCPC)].value = 'Amortissements'
+            ws['A'+str(PCPC)].style = style4
+            self.Amortissements = [0]*self.Horizon
+            for i in range(Horizon):
+                ws.cell(PCPC,i+2).value = sum(self.Amortissements[i*step:min(((i+1)*step),self.Horizon)])
+                ws.cell(PCPC,i+2).style = style4_numbers
+            PCPC +=1
+            
+            ###Section Resultat avant Impots
+            ws['A'+str(PCPC)].value = 'RESULTAT AVANT IMPOT'
+            ws['A'+str(PCPC)].style = style6
+            self.RAI[Pas] =[0]*Horizon
+            for i in range(Horizon):
+                self.RAI[Pas][i] = self.TotalResultatOp[i] + ResultatFinancier[i] - sum(self.Amortissements[i*step:min(((i+1)*step),self.Horizon)])
+                ws.cell(PCPC,i+2).value = self.RAI[Pas][i]
+                ws.cell(PCPC,i+2).style =  style6_numbers
+            PCPC += 1
+            
+            ###Section Impôts
+            ws['A'+str(PCPC)].value = 'IMPÔTS'
+            ws['A'+str(PCPC)].style = style2
+            self.Impots ={}
+            self.Impots[Pas] = IS(self,Pas)
+            for i in range(Horizon):
+                ws.cell(PCPC,i+2).value = self.Impots[Pas][i]
+                ws.cell(PCPC,i+2).style = style2_numbers
+            PCPC += 1 
+            
+            ###Section Resultats nets
+            ws['A'+str(PCPC)].value = 'RESULTAT NET'
+            ws['A'+str(PCPC)].style = style6
+            self.ResultatNet = [0]*Horizon
+            for i in range(Horizon):
+                self.ResultatNet[i] = self.RAI[Pas][i] - self.Impots[Pas][i]
+                ws.cell(PCPC,i+2).value = self.ResultatNet[i]
+                ws.cell(PCPC,i+2).style = style6_numbers
         wb.remove(wb['Sheet'])
         wb.save("cpc.xlsx")
 
@@ -1528,9 +1539,9 @@ def resultat_avant_impot(p):
   
 ## FISCALITE
 #### Début modif 1 ####          
-def IS(p):
-    r = p.RAI
-    per = p.pasVisualisation
+def IS(p,pas):
+    r = p.RAI[pas]
+    per = p.pasAffichage
     
     t = 0
     if per == 'A'      : t = 1   #renvoie nbr de cases à regrouper     
@@ -1570,7 +1581,7 @@ def IS(p):
                     
             s[i] = c*f(c)
                     
-    impots = [0]*len(p.RAI)
+    impots = [0]*len(p.RAI[pas])
     for i in range(0,len(s)):
         impots[min(((i+1)*t)-1,len(impots)-1)] = s[i]
     return(impots)
@@ -1628,4 +1639,18 @@ def convertir_affluence(horizon,pas):
     if pas == "S":  t=2
     if pas == "A":  t=1
     return roundN(horizon/t)
-        
+    
+def convertir_Taille(horizon,pasDepart,pasSouhaite):
+    t1=0
+    t2=0
+    if pasDepart == "M":  t1=1
+    if pasDepart == "T":  t1=3
+    if pasDepart == "S":  t1=6
+    if pasDepart == "A":  t1=12
+    
+    if pasSouhaite == "M":  t2=1
+    if pasSouhaite == "T":  t2=3
+    if pasSouhaite == "S":  t2=6
+    if pasSouhaite == "A":  t2=12
+    
+    return (int(roundN(horizon/(t2/t1))),int((t2/t1)))

@@ -1168,15 +1168,20 @@ def SendTables():
 
     ui.Projet.ListeInvest=[]
     print(ui.Projet.ListeInvest)
-    for i in range(2,ui.tableWidget.rowCount()-1):
+    for i in range(1,ui.tableWidget.rowCount()-1):
         ui2.tableWidget.setItem(i,0,QTableWidgetItem(ui.tableWidget.item(i,0).text()))
         print(ui.tableWidget.item(i,0).text())
     for i in range(2,ui.tableWidget.rowCount()-1):
         ui.Projet.ListeInvest.append([ui.tableWidget.item(i,0).text()])
-        
-    for i in range(2,ui.tableWidget.rowCount()-1):
+    #Remplissage des intitules
+    for i in range(1,ui.tableWidget.rowCount()-1):
         for j in range(2,int(ui.lineEdit.text())+2):
             ui2.tableWidget.setItem(i,j-1,QTableWidgetItem(ui.tableWidget.item(i,j).text()))
+    
+    #Remplissage des Investissement à partir de la Table
+    for i in range(2,ui.tableWidget.rowCount()-1):
+        for j in range(2,int(ui.lineEdit.text())+2):
+            # ui2.tableWidget.setItem(i,j-1,QTableWidgetItem(ui.tableWidget.item(i,j).text()))
             ui.Projet.ListeInvest[i-2].append(int(ui.tableWidget.item(i,j).text()))
     
     # print(np.array(L))
