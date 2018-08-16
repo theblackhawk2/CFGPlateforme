@@ -203,22 +203,25 @@ class Ui_Form(QWidget):
                     for j in self.Projet.ListeActivites:
                         if j.getNom() == i.text(0):
                             self.Projet.ListeActivites.pop(self.Projet.ListeActivites.index(j))
-            self.tableWidget.setColumnCount(int(self.lineEdit.text())+2)
+            self.tableWidget.setColumnCount(int(self.lineEdit.text())+3)
             self.tableWidget_2.setColumnCount(int(self.lineEdit.text())+2)
             self.tableWidget.item(1,0).setBackground(QtGui.QColor("red"))
             self.tableWidget.item(1,1).setBackground(QtGui.QColor("red"))
+            self.tableWidget.item(1,2).setBackground(QtGui.QColor("red"))
             self.tableWidget.item(1,0).setFont(QFont("Arial",12,italic =  True))
             self.tableWidget.item(1,1).setFont(QFont("Arial",12,italic =  True))
+            self.tableWidget.item(1,2).setFont(QFont("Arial",12,italic =  True))
             self.tableWidget_2.item(1,0).setBackground(QtGui.QColor("red"))
             self.tableWidget_2.item(1,1).setBackground(QtGui.QColor("red"))
             self.tableWidget_2.item(1,0).setFont(QFont("Arial",12,italic =  True))
             self.tableWidget_2.item(1,1).setFont(QFont("Arial",12,italic =  True))
             for i in range(2,int(self.lineEdit.text())+2):
-                self.tableWidget.setItem(1,i,QTableWidgetItem(self.Projet.pasVisualisation+str(i-1)))
+                self.tableWidget.setItem(1,i+1,QTableWidgetItem(self.Projet.pasVisualisation+str(i-1)))
                 self.tableWidget_2.setItem(1,i,QTableWidgetItem(self.Projet.pasVisualisation+str(i-1)))
-                self.tableWidget.item(1,i).setBackground(QtGui.QColor("red"))
+                print(i)
+                self.tableWidget.item(1,i+1).setBackground(QtGui.QColor("red"))
                 self.tableWidget_2.item(1,i).setBackground(QtGui.QColor("red"))                
-                self.tableWidget.item(1,i).setFont(QFont("Arial",12,italic =  True))
+                self.tableWidget.item(1,i+1).setFont(QFont("Arial",12,italic =  True))
                 self.tableWidget_2.item(1,i).setFont(QFont("Arial",12,italic =  True))
             for i in range(2,5):
                 for j in range(1,int(self.lineEdit.text())+2):
@@ -271,7 +274,8 @@ class Ui_Form(QWidget):
         self.tableWidget.setCellWidget(2,0,self.combo_invest)
         self.tableWidget.setCellWidget(0,1, button_invest)
         self.tableWidget.setItem(1,0,QTableWidgetItem("Investissements"))
-        self.tableWidget.setItem(1,1,QTableWidgetItem("Total"))
+        self.tableWidget.setItem(1,1,QTableWidgetItem("Amrt. (Année)"))
+        self.tableWidget.setItem(1,2,QTableWidgetItem("Total"))
         self.tableWidget.move(0,0)
         self.tableWidget.hide()
         
@@ -319,7 +323,8 @@ class Ui_Form(QWidget):
         self.tableWidget.setCellWidget(rowCount,0,self.combo_invest)
         self.tableWidget.setItem(rowCount-1,0, QTableWidgetItem(text))
         self.tableWidget.setItem(rowCount-1,1, QTableWidgetItem("0"))
-        for i in range(2,int(self.lineEdit.text())+2):
+        self.tableWidget.setItem(rowCount-1,2, QTableWidgetItem("0"))
+        for i in range(2,int(self.lineEdit.text())+3):
             self.tableWidget.setItem(rowCount-1,i, QTableWidgetItem("0"))
         if self.connected == False:
             self.tableWidget.cellChanged.connect(self.changed_cell)
@@ -363,10 +368,10 @@ class Ui_Form(QWidget):
                 self.tableWidget.setItem(i,j,QTableWidgetItem("0"))
                 
     def changed_cell(self,row,column):
-        if column == 1 or column == 0 or self.tableWidget.item(row,column).text() == "0":
+        if column == 1 or column == 0 or column == 2 or self.tableWidget.item(row,column).text() == "0":
             pass
         else:
-            self.tableWidget.setItem(row,1,QTableWidgetItem(str(Sum_cells(self.tableWidget,row,2,row,int(self.lineEdit.text())+1))))
+            self.tableWidget.setItem(row,2,QTableWidgetItem(str(Sum_cells(self.tableWidget,row,3,row,int(self.lineEdit.text())+2))))
             
     def changed_cell_2(self,row,column):
         if column == 1 or column == 0 or self.tableWidget_2.item(row,column).text() == "0":
@@ -1167,22 +1172,26 @@ def SendTables():
             ui2.tableWidget.setItem(i,j,QTableWidgetItem(""))
 
     ui.Projet.ListeInvest=[]
+    ui.Projet.ListeAmortissements = []
     print(ui.Projet.ListeInvest)
     for i in range(1,ui.tableWidget.rowCount()-1):
         ui2.tableWidget.setItem(i,0,QTableWidgetItem(ui.tableWidget.item(i,0).text()))
         print(ui.tableWidget.item(i,0).text())
+    #Remplissage de la liste des Intitules dans Invesstissement - Int. Amortissement - Période Amortissement
     for i in range(2,ui.tableWidget.rowCount()-1):
         ui.Projet.ListeInvest.append([ui.tableWidget.item(i,0).text()])
+        ui.Projet.ListeAmortissements.append([ui.tableWidget.item(i,0).text(),int(ui.tableWidget.item(i,1).text())])
     #Remplissage des intitules
     for i in range(1,ui.tableWidget.rowCount()-1):
-        for j in range(2,int(ui.lineEdit.text())+2):
-            ui2.tableWidget.setItem(i,j-1,QTableWidgetItem(ui.tableWidget.item(i,j).text()))
+        for j in range(3,int(ui.lineEdit.text())+3):
+            ui2.tableWidget.setItem(i,j-2,QTableWidgetItem(ui.tableWidget.item(i,j).text()))
     
     #Remplissage des Investissement à partir de la Table
     for i in range(2,ui.tableWidget.rowCount()-1):
-        for j in range(2,int(ui.lineEdit.text())+2):
+        for j in range(3,int(ui.lineEdit.text())+3):
             # ui2.tableWidget.setItem(i,j-1,QTableWidgetItem(ui.tableWidget.item(i,j).text()))
             ui.Projet.ListeInvest[i-2].append(int(ui.tableWidget.item(i,j).text()))
+    #Remplissage des amortissements
     
     # print(np.array(L))
     

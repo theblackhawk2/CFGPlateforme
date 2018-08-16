@@ -318,11 +318,10 @@ class Projet:
                 ws.cell(PTFT,i+2).style = style4_numbers
             PTFT += 1
             # # # # # Ammortissement
-            self.Amortissement = [0]*self.Horizon
             ws.cell(PTFT,1).value = "Amortissement"
             ws.cell(PTFT,1).style = style4
             for i in range(Horizon):
-                ws.cell(PTFT,i+2).value = sum(self.Amortissement[i*step:min(((i+1)*step),self.Horizon)])
+                ws.cell(PTFT,i+2).value = sum(self.Amortissements[i*step:min(((i+1)*step),self.Horizon)])
                 ws.cell(PTFT,i+2).style = style4_numbers
             PTFT += 1
             # # # # # Variation BFR
@@ -633,7 +632,12 @@ class Projet:
             PCPC += 1
             ws['A'+str(PCPC)].value = 'Amortissements'
             ws['A'+str(PCPC)].style = style4
-            self.Amortissements = [0]*self.Horizon
+            for i in range(len(self.ListeInvest)):
+                self.ListeInvest[i] += [0]*(self.Horizon-len(self.ListeInvest[i])+1)
+            self.Amortissements = np.array([0]*self.Horizon)
+            for i in range(len(self.ListeInvest)):
+                self.Amortissements += np.array(Amortissement(self.ListeInvest[i][1:],self.ListeAmortissements[i][1],self.pasVisualisation)).astype('int')
+            self.Amortissements = list(self.Amortissements)
             for i in range(Horizon):
                 ws.cell(PCPC,i+2).value = sum(self.Amortissements[i*step:min(((i+1)*step),self.Horizon)])
                 ws.cell(PCPC,i+2).style = style4_numbers
@@ -1654,3 +1658,63 @@ def convertir_Taille(horizon,pasDepart,pasSouhaite):
     if pasSouhaite == "A":  t2=12
     
     return (int(roundN(horizon/(t2/t1))),int((t2/t1)))
+    
+def Amortissement(Investissement,Amortissement,pas):
+    L = Investissement.copy()
+    # L = [1000,0,0,0,0,0,2000,3000,4000,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    Horizon = len(L)
+    # pas = 'T'
+    # Amortissement = 4
+    date_Achat = lastNotNull(L)
+    Montant_Amorti = sum(L)/Amortissement
+    steps = pas_Ammo(pas)
+    VAmortissements = [0]*len(L)
+    Total_Amorti = 0
+    if len(L) > date_Achat+steps-date_Achat%steps-1:
+        VAmortissements[date_Achat+steps-date_Achat%steps-1] = ((days(pas)*(steps-date_Achat%steps-1))/360)*Montant_Amorti
+        Total_Amorti += ((days(pas)*(steps-date_Achat%steps-1))/360)*Montant_Amorti
+        PeriodeFinale = date_Achat+steps-date_Achat%steps-1
+        if PeriodeFinale <= len(L)-1:
+            for i in range(date_Achat+steps-date_Achat%steps+steps-1,len(L),steps):
+                if Total_Amorti+Montant_Amorti <= sum(L):
+                    VAmortissements[i] = Montant_Amorti
+                    Total_Amorti += Montant_Amorti
+                    PeriodeFinale = i
+                else:
+                    VAmortissements[i] = sum(L) - Total_Amorti
+                    Total_Amorti = sum(L)
+                    PeriodeFinale = i
+        
+        if PeriodeFinale!= len(L)-1:
+            if Total_Amorti+Montant_Amorti <= sum(L):
+                VAmortissements[-1] = (((len(L)-1-PeriodeFinale)*days(pas))/360)*Montant_Amorti
+            else:
+                VAmortissements[-1] = sum(L) - Total_Amorti
+        return VAmortissements
+    else:
+        VAmortissements[-1] = (((len(L)-1-date_Achat)*days(pas))/360)*Montant_Amorti
+        return VAmortissements
+        
+def days(pas):
+    days = 0
+    if      pas == 'M':  days = 30
+    elif    pas == 'T':  days = 30*3
+    elif    pas == 'S':  days = 30*6
+    elif    pas == 'A':  days = 30*12
+    return days
+
+def pas_Ammo(pas):
+    t=0
+    if      pas == 'M':  t=12
+    elif    pas == 'T': t=4
+    elif    pas == 'S': t=2
+    elif    pas == 'A': t=1
+    return t
+    
+def lastNotNull(L):
+    index = 0
+    for i in range(len(L)):
+        if L[i] != 0:
+            index = i
+    return index
+
