@@ -333,7 +333,7 @@ class Projet:
                 ws.cell(PTFT,i+2).style = style4_numbers
             PTFT += 1
             ##### Flux Invesstissement
-            ws.cell(PTFT,1).value = "Flux d'Invesstissement"
+            ws.cell(PTFT,1).value = "Flux d'Investissement"
             ws.cell(PTFT,1).style = style2
             for i in range(Horizon):
                 ws.cell(PTFT,i+2).value = ""
@@ -356,7 +356,7 @@ class Projet:
             PTFT += 1
             # # # # # Fonds Propres Injectés
             l = [0]*self.Horizon
-            ws.cell(PTFT,1).value = "Fond Propres"
+            ws.cell(PTFT,1).value = "Fonds Propres"
             ws.cell(PTFT,1).style = style4
             for i in range(len(self.FondsPropres)):
                 l[i] = self.FondsPropres[i]
@@ -391,7 +391,7 @@ class Projet:
             
             PTFT += 1
             # # # # # Remboursement de la dette (Capital)
-            self.RemboursementDette = [0]*self.Horizon
+            
             ws.cell(PTFT,1).value = "Remboursement de la dette"
             ws.cell(PTFT,1).style = style4
             for i in range(Horizon):
@@ -433,7 +433,7 @@ class Projet:
                     ws.cell(PTFT,i+2).style = style2_numbers
                 PTFT += 1
             else:
-                for i in range(self.Horizon):
+                for i in range(Horizon):
                     self.FluxTresorerie[i] = self.RAI[Pas][i]-self.Impots[Pas][i]+sum(self.Amortissements[i*step:min(((i+1)*step),self.Horizon)])+sum(self.VBFR[i*step:min(((i+1)*step),self.Horizon)])+sum(self.FondsPropres[i*step:min(((i+1)*step),self.Horizon)])+sum(self.Dette[i*step:min(((i+1)*step),self.Horizon)])+sum(self.CCA[i*step:min(((i+1)*step),self.Horizon)])-sum(self.RemboursementDette[i*step:min(((i+1)*step),self.Horizon)])-sum(self.RemboursementCCA[i*step:min(((i+1)*step),self.Horizon)])-sum(self.RemboursementDividendes[i*step:min(((i+1)*step),self.Horizon)])
                     ws.cell(PTFT,i+2).value = self.FluxTresorerie[i]
                     ws.cell(PTFT,i+2).style = style2_numbers
@@ -606,7 +606,7 @@ class Projet:
             ###Section Charges Financières
             ws['A'+str(PCPC)].value = 'CHARGES FINANCIERES'
             ws['A'+str(PCPC)].style = style2
-            self.Interets = [0]*self.Horizon
+            # self.Interets = [0]*self.Horizon
             for i in range(Horizon):
                 ws.cell(PCPC,i+2).style = style2
             PCPC +=1
@@ -1666,35 +1666,37 @@ def Amortissement(Investissement,Amortissement,pas):
     # pas = 'T'
     # Amortissement = 4
     date_Achat = lastNotNull(L)
-    Montant_Amorti = sum(L)/Amortissement
     steps = pas_Ammo(pas)
     VAmortissements = [0]*len(L)
     Total_Amorti = 0
-    if len(L) > date_Achat+steps-date_Achat%steps-1:
-        VAmortissements[date_Achat+steps-date_Achat%steps-1] = ((days(pas)*(steps-date_Achat%steps-1))/360)*Montant_Amorti
-        Total_Amorti += ((days(pas)*(steps-date_Achat%steps-1))/360)*Montant_Amorti
-        PeriodeFinale = date_Achat+steps-date_Achat%steps-1
-        if PeriodeFinale <= len(L)-1:
-            for i in range(date_Achat+steps-date_Achat%steps+steps-1,len(L),steps):
+    if Amortissement != 0:
+        Montant_Amorti = sum(L)/Amortissement
+        if len(L) > date_Achat+steps-date_Achat%steps-1:
+            VAmortissements[date_Achat+steps-date_Achat%steps-1] = ((days(pas)*(steps-date_Achat%steps-1))/360)*Montant_Amorti
+            Total_Amorti += ((days(pas)*(steps-date_Achat%steps-1))/360)*Montant_Amorti
+            PeriodeFinale = date_Achat+steps-date_Achat%steps-1
+            if PeriodeFinale <= len(L)-1:
+                for i in range(date_Achat+steps-date_Achat%steps+steps-1,len(L),steps):
+                    if Total_Amorti+Montant_Amorti <= sum(L):
+                        VAmortissements[i] = Montant_Amorti
+                        Total_Amorti += Montant_Amorti
+                        PeriodeFinale = i
+                    else:
+                        VAmortissements[i] = sum(L) - Total_Amorti
+                        Total_Amorti = sum(L)
+                        PeriodeFinale = i
+            
+            if PeriodeFinale!= len(L)-1:
                 if Total_Amorti+Montant_Amorti <= sum(L):
-                    VAmortissements[i] = Montant_Amorti
-                    Total_Amorti += Montant_Amorti
-                    PeriodeFinale = i
+                    VAmortissements[-1] = (((len(L)-1-PeriodeFinale)*days(pas))/360)*Montant_Amorti
                 else:
-                    VAmortissements[i] = sum(L) - Total_Amorti
-                    Total_Amorti = sum(L)
-                    PeriodeFinale = i
-        
-        if PeriodeFinale!= len(L)-1:
-            if Total_Amorti+Montant_Amorti <= sum(L):
-                VAmortissements[-1] = (((len(L)-1-PeriodeFinale)*days(pas))/360)*Montant_Amorti
-            else:
-                VAmortissements[-1] = sum(L) - Total_Amorti
-        return VAmortissements
+                    VAmortissements[-1] = sum(L) - Total_Amorti
+            return VAmortissements
+        else:
+            VAmortissements[-1] = (((len(L)-1-date_Achat)*days(pas))/360)*Montant_Amorti
+            return VAmortissements
     else:
-        VAmortissements[-1] = (((len(L)-1-date_Achat)*days(pas))/360)*Montant_Amorti
-        return VAmortissements
-        
+        return [0]*Horizon
 def days(pas):
     days = 0
     if      pas == 'M':  days = 30

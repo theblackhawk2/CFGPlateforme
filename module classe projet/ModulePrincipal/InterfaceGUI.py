@@ -147,6 +147,7 @@ class Ui_Form(QWidget):
         self.pushButton_2.clicked.connect(go_to_page2)
         self.createTable()
         self.progressBar.hide()
+        self.dateEdit.setDate(QDate.currentDate())
     def on_confirm_click(self):
         if self.ProjetValide == False:
             if self.comboBox.currentText() == '----------':
@@ -235,9 +236,15 @@ class Ui_Form(QWidget):
             #self.confirm_invest.show()
             self.tableWidget.resizeColumnsToContents()
             self.tableWidget_2.resizeColumnsToContents()
-            
+            self.tableWidget_3.resizeColumnsToContents()
             self.ActiviteValide = True
-            
+            #Modification pour la dette
+            self.tableWidget_3.setColumnCount(int(self.lineEdit_3.text())+2)
+            for i in range(1,int(self.lineEdit_3.text())+1):
+                self.tableWidget_3.setItem(4,i,QTableWidgetItem(self.Projet.pasVisualisation+str(i)))
+                self.tableWidget_3.item(4,i).setBackground(QtGui.QColor("red"))
+                self.tableWidget_3.item(4,i).setFont(QFont("Arial",12,italic =  True))
+                self.tableWidget_3.setItem(5,i,QTableWidgetItem("0"))
         else:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Information)
@@ -245,6 +252,7 @@ class Ui_Form(QWidget):
             msg.setInformativeText("Vous avez deja validé les Activités")
             msg.setWindowTitle("Activités déja validés")
             msg.exec_() 
+    
     def createTable(self):
         self.createTableInvest()
         self.createTableFinanc()
@@ -304,7 +312,7 @@ class Ui_Form(QWidget):
         self.tableWidget_3.setGeometry(QtCore.QRect(390, 220, 595, 376))
         self.tableWidget_3.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.tableWidget.move(0,0)
-        self.tableWidget_3.setRowCount(5)
+        self.tableWidget_3.setRowCount(6)
         self.tableWidget_3.setColumnCount(30)
         self.tableWidget_3.setItem(0,0, QTableWidgetItem("Quels sont les spécifications de votre dette ?"))
         self.tableWidget_3.item(0,0).setFont(QFont("Times New Roman",10,weight = 1))
@@ -314,6 +322,7 @@ class Ui_Form(QWidget):
         self.tableWidget_3.setItem(1,1,QTableWidgetItem("0"))
         self.tableWidget_3.setItem(2,1,QTableWidgetItem("0"))
         self.tableWidget_3.setItem(3,1,QTableWidgetItem("0"))
+        self.tableWidget_3.setItem(5,0,QTableWidgetItem("Remboursement de la Dette"))
         self.tableWidget_3.move(0,0)
         
     def clicked_add_invest(self):
@@ -445,13 +454,24 @@ class Ui_Form_3(object):
         self.label_2 = QtWidgets.QLabel(Form)
         self.label_2.setGeometry(QtCore.QRect(20, 90, 331, 16))
         self.label_2.setObjectName("label_2")
+        self.label_4 = QtWidgets.QLabel(Form)
+        self.label_4.setGeometry(QtCore.QRect(20, 160, 331, 16))
+        self.label_4.setText("Quel est votre % de variation du BFR ?")
+        self.label_4.setObjectName("label_4")
+        self.label_5 = QtWidgets.QLabel(Form)
+        self.label_5.setGeometry(QtCore.QRect(480, 160, 331, 16))
+        self.label_5.setText("%")
+        self.label_5.setObjectName("label_4")
+        self.lineEdit = QtWidgets.QLineEdit(Form)
+        self.lineEdit.setGeometry(QtCore.QRect(365, 160, 110, 22))
+        self.lineEdit.setObjectName("lineEdit")
         self.line_2 = QtWidgets.QFrame(Form)
-        self.line_2.setGeometry(QtCore.QRect(20, 150, 951, 16))
+        self.line_2.setGeometry(QtCore.QRect(20, 140, 951, 16))
         self.line_2.setFrameShape(QtWidgets.QFrame.HLine)
         self.line_2.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.line_2.setObjectName("line_2")
         self.label_3 = QtWidgets.QLabel(Form)
-        self.label_3.setGeometry(QtCore.QRect(20, 130, 161, 16))
+        self.label_3.setGeometry(QtCore.QRect(20, 120, 161, 16))
         font = QtGui.QFont()
         font.setPointSize(12)
         font.setBold(True)
@@ -544,6 +564,7 @@ class Ui_Form_3(object):
         self.groupBox_2.setTitle(_translate("Form", "Qu\'est ce que vous achetez ?"))
 
     def initUI(self):
+        self.dateEdit.setDate(ui.dateEdit.date())
         self.buttonDetails.clicked.connect(self.details_clicked)
         self.buttonDetails_2.clicked.connect(self.details_clicked_2)
         
@@ -1155,12 +1176,18 @@ def SendTables():
         ui.Projet.CCA[i]          = int(ui.tableWidget_2.item(3,i+2).text())
         ui.Projet.Dette[i]        = int(ui.tableWidget_2.item(4,i+2).text())
     ui.Projet.InitialiserDette()
+    ui.Projet.RemboursementDette = [0]*ui.Projet.Horizon
+    for i in range(1,int(ui.lineEdit_3.text())+1):
+        ui.Projet.RemboursementDette[i-1] = int(ui.tableWidget_3.item(5,i).text())
+    ui.Projet.Interets = [0]*ui.Projet.Horizon
     ui.Projet.DetteObj.horizon = int(ui.tableWidget_3.item(1,1).text())
     ui.Projet.DetteObj.total = sum(ui.Projet.Dette)
     ui.Projet.DetteObj.taux = float(ui.tableWidget_3.item(2,1).text())
     ui.Projet.DetteObj.date_debut_remboursement = int(ui.tableWidget_3.item(3,1).text())
     ui.Projet.DetteObj.periodicite = "A"
     ui.Projet.DetteObj.apport_dette = [0]*ui.Projet.Horizon
+    for i in range(ui.Projet.DetteObj.date_debut_remboursement-1,len(ui.Projet.Interets)):
+        ui.Projet.Interets[i] = ui.Projet.DetteObj.taux*sum(ui.Projet.RemboursementDette[i:])
     # for i in range(ui.tableWidget_2.columnCount()-2):
     #     ui.Projet.DetteObj.apport_dette[i] = int(ui.tableWidget_2.item(4,i+2).text())
     # print(ui.Projet.DetteObj.__dict__)
