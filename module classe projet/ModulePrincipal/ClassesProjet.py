@@ -325,7 +325,13 @@ class Projet:
                 ws.cell(PTFT,i+2).style = style4_numbers
             PTFT += 1
             # # # # # Variation BFR
+            SommeRevenus = [0]*self.Horizon
+            for activite in self.ListeActivites:
+                for revenu in activite.getlistRev():
+                    SommeRevenus[i] += revenu.resultat[i]
             self.VBFR = [0]*self.Horizon
+            for i in range(len(self.VBFR)):
+                self.VBFR[i] = self.prcVBFR*SommeRevenus[i]
             ws.cell(PTFT,1).value = "Variation BFR"
             ws.cell(PTFT,1).style = style4
             for i in range(Horizon):

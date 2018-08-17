@@ -1302,6 +1302,7 @@ def go_to_page3():
 
 def go_to_page4():
     ## Modif 1 Filtrage des couts ##
+    ui.Projet.prcVBFR = float(ui3.lineEdit.text())/100
     root = ui3.listWidget_2.invisibleRootItem()
     CorbeilleCouts = []
     for i in range(root.childCount()):
